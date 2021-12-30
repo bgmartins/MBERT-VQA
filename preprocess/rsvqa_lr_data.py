@@ -1,42 +1,60 @@
 import pandas as pd
+import json
 import os
+import glob
+from PIL import Image
 
-#ImageCLEF 2019 - MED VQA
-data_dir = os.path.join('..', 'ImageClef-2019-VQA-Med')
-train_dir = os.path.join(data_dir, 'Train')
-val_dir = os.path.join(data_dir, 'Val')
-test_dir = os.path.join(data_dir, 'Test')
-def create_df(d_dir, mode):
-    res = pd.DataFrame()
-    category_files = os.listdir(os.path.join(d_dir, 'QAPairsByCategory'))
-    print(category_files)
-    for f in category_files:
-        category = f.split('_')[1].lower()
-        print(category)
-        file_path = os.path.join(d_dir, 'QAPairsByCategory', f)
-        print(file_path)
-        df = pd.read_csv(file_path, sep='|', names = ['img_id', 'question', 'answer'])
+data_dir = os.path.join('..', 'datasets/RSVQA_LR')
 
-        df['mode'] = [mode] * df.shape[0]
-        df['category'] = [category] * df.shape[0]
-        df.loc[df.answer == 'no', 'category'] = 'binary'
-        df.loc[df.answer == 'yes', 'category'] = 'binary'
+train_data_images = json.load(open(os.path.join(data_dir, 'LR_split_train_images.json')))["images"]
+train_data_questions = json.load(open(os.path.join(data_dir, 'LR_split_train_questions.json')))["questions"]
+train_data_answers = json.load(open(os.path.join(data_dir, 'LR_split_train_answers.json')))["answers"]
 
-        res = pd.concat([res,df])
-        
-    return res
+test_data_images = json.load(open(os.path.join(data_dir, 'LR_split_test_images.json')))["images"]
+test_data_questions = json.load(open(os.path.join(data_dir, 'LR_split_test_questions.json')))["questions"]
+test_data_answers = json.load(open(os.path.join(data_dir, 'LR_split_test_answers.json')))["answers"]
 
-train_df = create_df(train_dir, 'train')
-val_df = create_df(val_dir, 'val')
+val_data_images = json.load(open(os.path.join(data_dir, 'LR_split_val_images.json')))["images"]
+val_data_questions = json.load(open(os.path.join(data_dir, 'LR_split_val_questions.json')))["questions"]
+val_data_answers = json.load(open(os.path.join(data_dir, 'LR_split_val_answers.json')))["answers"]
 
-test_df = pd.read_csv(os.path.join(test_dir,'test_questions&answers.txt'), sep='|', names = ['img_id', 'category', 'question', 'answer'])
-test_df.loc[test_df.answer == 'no', 'category'] = 'binary'
-test_df.loc[test_df.answer == 'yes', 'category'] = 'binary'
-test_df['mode'] = ['test'] * test_df.shape[0]
+train_data_images = [x for x in train_data_images if x['active'] == True]
+train_data_questions = [x for x in train_data_questions if x['active'] == True]
+train_data_answers = [x for x in train_data_answers if x['active'] == True]
 
-cols = train_df.columns.tolist()
-test_df = test_df[cols]
+test_data_images = [x for x in test_data_images if x['active'] == True]
+test_data_questions = [x for x in test_data_questions if x['active'] == True]
+test_data_answers = [x for x in test_data_answers if x['active'] == True]
 
-train_df.to_csv(os.path.join(train_dir, 'traindf.csv'), index=False, columns=cols)
-val_df.to_csv(os.path.join(val_dir, 'valdf.csv'), index=False, columns=cols)
-test_df.to_csv(os.path.join(test_dir, 'testdf.csv'), index=False, columns=cols)
+val_data_images = [x for x in val_data_images if x['active'] == True]
+val_data_questions = [x for x in val_data_questions if x['active'] == True]
+val_data_answers = [x for x in val_data_answers if x['active'] == True]
+
+train_df = pd.DataFrame(train_data_questions)
+train_df = train_df.merge(pd.DataFrame(train_data_answers), how='inner', suffixes=('_1', '_2'), left_on = 'id', right_on = 'question_id')
+train_df = train_df.drop(['id_1', 'id_2','date_added_1','date_added_2','people_id_1','people_id_2','active_1','active_2','question_id','answers_ids'], axis=1)
+train_df = train_df.rename(columns={"type": "category"})
+train_df.insert(0, 'mode', 'train')
+
+test_df = pd.DataFrame(test_data_questions)
+test_df = test_df.merge(pd.DataFrame(test_data_answers), how='inner', suffixes=('_1', '_2'), left_on = 'id', right_on = 'question_id')
+test_df = test_df.drop(['id_1', 'id_2','date_added_1','date_added_2','people_id_1','people_id_2','active_1','active_2','question_id','answers_ids'], axis=1)
+test_df = test_df.rename(columns={"type": "category"})
+test_df.insert(0, 'mode', 'test')
+
+val_df = pd.DataFrame(val_data_questions)
+val_df = val_df.merge(pd.DataFrame(val_data_answers), how='inner', suffixes=('_1', '_2'), left_on = 'id', right_on = 'question_id')
+val_df = val_df.drop(['id_1', 'id_2','date_added_1','date_added_2','people_id_1','people_id_2','active_1','active_2','question_id','answers_ids'], axis=1)
+val_df = val_df.rename(columns={"type": "category"})
+val_df.insert(0, 'mode', 'val')
+
+for aux in glob.glob(os.path.join(data_dir, 'Images_LR') + "/*.tif"):
+    im = Image.open(aux)
+    out = im.convert("RGB")
+    out.save(aux[:-3] + "jpg", "JPEG", quality=100)    
+    print(aux)
+
+train_df.to_csv(os.path.join(data_dir, 'traindf.csv'), index=False)
+val_df.to_csv(os.path.join(data_dir, 'valdf.csv'), index=False)
+test_df.to_csv(os.path.join(data_dir, 'testdf.csv'), index=False)
+
