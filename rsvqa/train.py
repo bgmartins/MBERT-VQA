@@ -13,17 +13,10 @@ from torchvision import transforms, models
 from torch.cuda.amp import GradScaler
 import os
 import warnings
-#import albumentations as A
-#import pretrainedmodels
-#from albumentations.core.composition import OneOf
-#from albumentations.pytorch.transforms import ToTensorV2
-
 from models.mmbert import Model
 from models.asl_singlelabel import ASLSingleLabel
 
 warnings.simplefilter("ignore", UserWarning)
-
-
 
 if __name__ == '__main__':
     __spec__ = None
@@ -81,7 +74,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print('Using wandb',args.wandb)
     if args.wandb:
-        wandb.init(project='medvqa', name = args.run_name, config = args) #settings=wandb.Settings(start_method='fork'),
+        wandb.init(project='rs-vqa', name = args.run_name, config = args) #settings=wandb.Settings(start_method='fork'),
 
     seed_everything(args.seed)
 

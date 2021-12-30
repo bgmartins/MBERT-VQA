@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import random
 import math
-#import cv2
 from PIL import Image
 import torch
 from torchvision import transforms, models
@@ -19,8 +18,6 @@ from tqdm import tqdm
 from PIL import Image
 from random import choice
 import matplotlib.pyplot as plt
-
-#import pretrainedmodels
 from transformers import AutoTokenizer, AutoModel
 
 def seed_everything(seed):
@@ -33,19 +30,14 @@ def seed_everything(seed):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = True
 
-
-
 def make_df(file_path):
     paths = os.listdir(file_path)
-
     df_list = []
-
     for p in paths:
         df = pd.read_csv(os.path.join(file_path, p), sep='|', names = ['img_id', 'question', 'answer'])
         df['category'] = p.split('_')[1]
         df['mode'] = p.split('_')[2][:-4]
         df_list.append(df)
-
     return pd.concat(df_list)
 
 def load_data(args, remove = None):
@@ -57,9 +49,9 @@ def load_data(args, remove = None):
     if remove is not None:
         traindf = traindf[~traindf['img_id'].isin(remove)].reset_index(drop=True)
 
-    traindf['img_id'] = traindf['img_id'].apply(lambda x: os.path.join(args.data_dir, 'Train','images', x + '.jpg'))
-    valdf['img_id'] = valdf['img_id'].apply(lambda x: os.path.join(args.data_dir, 'Val','images', x + '.jpg'))
-    testdf['img_id'] = testdf['img_id'].apply(lambda x: os.path.join(args.data_dir, 'Test','images', x + '.jpg'))
+    traindf['img_id'] = traindf['img_id'].apply(lambda x: os.path.join(args.data_dir, 'Images_LR', str(x) + '.jpg'))
+    valdf['img_id'] = valdf['img_id'].apply(lambda x: os.path.join(args.data_dir, 'Images_LR', str(x) + '.jpg'))
+    testdf['img_id'] = testdf['img_id'].apply(lambda x: os.path.join(args.data_dir, 'Images_LR', str(x) + '.jpg'))
     # testdf['img_id'] = testdf['img_id'].apply(lambda x: os.path.join(args.data_dir, x + '.jpg'))
 
     traindf['category'] = traindf['category'].str.lower()
@@ -105,8 +97,6 @@ def load_2020_data(args):
     valdf['imgid'] = valdf['imgid'].apply(lambda x: args.datapath2020 + '/VQAMed2020-VQAnswering-ValidationSet/VQAnswering_2020_Val_images/' + x + '_224.jpg')
     testdf['imgid'] = testdf['imgid'].apply(lambda x: args.testpath + '/Task1-2020-VQAnswering-Test-Images/' + x + '_224.jpg')
 
-
-
     classes2020 = list(set(list(traindf['answer'].unique()) + list(valdf['answer'].unique())))
 
     train19, val19, test19 = load_data(args, remove = remove_train2019)
@@ -146,12 +136,9 @@ def load_2020_data(args):
 
     return traindf, valdf, testdf, idx2ans, num_classes
 
-
-
 #Utils
 def gelu(x):
     return x * 0.5 * (1.0 + torch.erf(x / math.sqrt(2.0)))
-
 
 def encode_text(caption,tokenizer, args):
     part1 = [0 for _ in range(5)]
@@ -165,7 +152,6 @@ def encode_text(caption,tokenizer, args):
     tokens.extend([0]*n_pad)
     segment_ids.extend([0]*n_pad)
     input_mask.extend([0]*n_pad)
-
 
     return tokens, segment_ids, input_mask
 
