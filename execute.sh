@@ -21,6 +21,7 @@
 
 #cd preprocess
 #python3 rsvqa_lr_data.py
+#python3 rsvqa_hr_data.py
 #cd ..
 
 PYTHONPATH=. python3 rsvqa/train.py --run_name='vqa_run_name' --cnn_encoder='tf_efficientnetv2_m' --transformer_model='realformer' --data_dir="datasets/RSVQA_LR" --model_dir='trained-model' --batch_size=4 --num_vis=5 --hidden_size=768 --num_workers=16 --save_dir="test-results" --loss='ASLSingleLabel' --epochs=100
