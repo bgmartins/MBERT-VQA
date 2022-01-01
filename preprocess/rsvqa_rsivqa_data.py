@@ -1,3 +1,4 @@
+import random
 import pandas as pd
 import os
 import glob
@@ -30,36 +31,40 @@ for pos,str in enumerate(dataset2):
     if pos==0: continue
     if str.endswith("?yes\n") or str.endswith("?no\n"): category = "yes_no"
     else: category = "not_yes_no"
-    dataset2[pos] = "test,aid_" + str[:str.index(":")] + "," + category + "," + str[str.index(":")+1:str.index("?")+1] + "," + str[str.index("?")+1:]
+    dataset2[pos] = "test,dota_" + str[:str.index(":")] + "," + category + "," + str[str.index(":")+1:str.index("?")+1] + "," + str[str.index("?")+1:]
 for pos,str in enumerate(dataset3):
     if pos==0: continue
     if str.endswith("?yes\n") or str.endswith("?no\n"): category = "yes_no"
     else: category = "not_yes_no"
-    dataset3[pos] = "test,aid_" + str[:str.index(":")] + "," + category + "," + str[str.index(":")+1:str.index("?")+1] + "," + str[str.index("?")+1:]
+    dataset3[pos] = "test,dota_" + str[:str.index(":")] + "," + category + "," + str[str.index(":")+1:str.index("?")+1] + "," + str[str.index("?")+1:]
 for pos,str in enumerate(dataset4):
     if pos==0: continue
     if str.endswith("?yes\n") or str.endswith("?no\n"): category = "yes_no"
     else: category = "not_yes_no"
-    dataset4[pos] = "test,aid_" + str[:str.index(":")] + "," + category + "," + str[str.index(":")+1:str.index("?")+1] + "," + str[str.index("?")+1:]
+    dataset4[pos] = "test,opt_" + str[:str.index(":")] + "," + category + "," + str[str.index(":")+1:str.index("?")+1] + "," + str[str.index("?")+1:]
 for pos,str in enumerate(dataset5):
     if pos==0: continue
     if str.endswith("?yes\n") or str.endswith("?no\n"): category = "yes_no"
     else: category = "not_yes_no"
-    dataset5[pos] = "test,aid_" + str[:str.index(":")] + "," + category + "," + str[str.index(":")+1:str.index("?")+1] + "," + str[str.index("?")+1:]
+    dataset5[pos] = "test,sydney_" + str[:str.index(":")] + "," + category + "," + str[str.index(":")+1:str.index("?")+1] + "," + str[str.index("?")+1:]
 for pos,str in enumerate(dataset6):
     if pos==0: continue
     if str.endswith("?yes\n") or str.endswith("?no\n"): category = "yes_no"
     else: category = "not_yes_no"
-    dataset6[pos] = "test,aid_" + str[:str.index(":")] + "," + category + "," + str[str.index(":")+1:str.index("?")+1] + "," + str[str.index("?")+1:]
+    dataset6[pos] = "test,ucm_" + str[:str.index(":")] + "," + category + "," + str[str.index(":")+1:str.index("?")+1] + "," + str[str.index("?")+1:]
 for pos,str in enumerate(dataset7):
     if pos==0: continue
     if str.endswith("?yes\n") or str.endswith("?no\n"): category = "yes_no"
     else: category = "not_yes_no"
-    dataset7[pos] = "test,aid_" + str[:str.index(":")] + "," + category + "," + str[str.index(":")+1:str.index("?")+1] + "," + str[str.index("?")+1:]
+    dataset7[pos] = "test,ucm_" + str[:str.index(":")] + "," + category + "," + str[str.index(":")+1:str.index("?")+1] + "," + str[str.index("?")+1:]
 
-train_data = dataset1 + dataset2[1:] + dataset3[1:]
-test_data = dataset4 + dataset5[1:] + dataset6[1:]
-val_data = dataset7
+aux_data = dataset1[1:] + dataset2[1:] + dataset3[1:] + dataset4[1:] + dataset5[1:] + dataset6[1:] + dataset7[1:]
+random.shuffle(aux_data)
+size1 = int(len(aux_data) * 0.8)
+size2 = int(len(aux_data) * 0.1)
+train_data = [ dataset1[0] ] + aux_data[0:size1]
+test_data = [ dataset1[0] ] + aux_data[size1+1:size1+size2]
+val_data = [ dataset1[0] ] + aux_data[size1+size2+1:]
 
 open(os.path.join(data_dir, 'traindf.csv'), 'w').writelines(train_data)
 open(os.path.join(data_dir, 'valdf.csv'), 'w').writelines(val_data)
