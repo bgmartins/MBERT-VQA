@@ -47,6 +47,7 @@
 #mv "RSVQAxBEN_split_val_questions.json?download=1" RSVQAxBEN_split_val_questions.json
 #cd ../..
 
+## TODO: Get images associated to the different sources for this dataset.
 #cd datasets
 #wget https://github.com/spectralpublic/RSIVQA/archive/refs/heads/main.zip
 #unzip main.zip

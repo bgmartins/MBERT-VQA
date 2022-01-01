@@ -1,60 +1,66 @@
 import pandas as pd
-import json
 import os
 import glob
 from PIL import Image
 
-data_dir = os.path.join('..', 'datasets/RSVQA_BEN')
+data_dir = os.path.join('..', 'datasets/RSIVQA')
 
-train_data_images = json.load(open(os.path.join(data_dir, 'RSVQAxBEN_split_train_images.json')))["images"]
-train_data_questions = json.load(open(os.path.join(data_dir, 'RSVQAxBEN_split_train_questions.json')))["questions"]
-train_data_answers = json.load(open(os.path.join(data_dir, 'RSVQAxBEN_split_train_answers.json')))["answers"]
+dataset1 = open(os.path.join(data_dir, 'AID/rsicd_vqa.txt')).readlines()
+dataset2 = open(os.path.join(data_dir, 'DOTA/dota_train_vqa2.txt')).readlines()
+dataset3 = open(os.path.join(data_dir, 'DOTA/dota_val_vqa2.txt')).readlines()
+dataset4 = open(os.path.join(data_dir, 'HRRSD/opt_val_vqa.txt')).readlines()
+dataset5 = open(os.path.join(data_dir, 'Sydney/sydney_vqa.txt')).readlines()
+dataset6 = open(os.path.join(data_dir, 'UCM/ucm_res.txt')).readlines()
+dataset7 = open(os.path.join(data_dir, 'UCM/ucm_vqa.txt')).readlines()
 
-test_data_images = json.load(open(os.path.join(data_dir, 'RSVQAxBEN_split_test_images.json')))["images"]
-test_data_questions = json.load(open(os.path.join(data_dir, 'RSVQAxBEN_split_test_questions.json')))["questions"]
-test_data_answers = json.load(open(os.path.join(data_dir, 'RSVQAxBEN_split_test_answers.json')))["answers"]
+dataset1[0] = "mode,img_id,category,question,answer\n"
+dataset2[0] = "mode,img_id,category,question,answer\n"
+dataset3[0] = "mode,img_id,category,question,answer\n"
+dataset4[0] = "mode,img_id,category,question,answer\n"
+dataset5[0] = "mode,img_id,category,question,answer\n"
+dataset6[0] = "mode,img_id,category,question,answer\n"
+dataset7[0] = "mode,img_id,category,question,answer\n"
 
-val_data_images = json.load(open(os.path.join(data_dir, 'RSVQAxBEN_split_val_images.json')))["images"]
-val_data_questions = json.load(open(os.path.join(data_dir, 'RSVQAxBEN_split_val_questions.json')))["questions"]
-val_data_answers = json.load(open(os.path.join(data_dir, 'RSVQAxBEN_split_val_answers.json')))["answers"]
+for pos,str in enumerate(dataset1):
+    if pos==0: continue
+    if str.endswith("?yes\n") or str.endswith("?no\n"): category = "yes_no"
+    else: category = "not_yes_no"
+    dataset1[pos] = "test,aid_" + str[:str.index(":")] + "," + category + "," + str[str.index(":")+1:str.index("?")+1] + "," + str[str.index("?")+1:]
+for pos,str in enumerate(dataset2):
+    if pos==0: continue
+    if str.endswith("?yes\n") or str.endswith("?no\n"): category = "yes_no"
+    else: category = "not_yes_no"
+    dataset2[pos] = "test,aid_" + str[:str.index(":")] + "," + category + "," + str[str.index(":")+1:str.index("?")+1] + "," + str[str.index("?")+1:]
+for pos,str in enumerate(dataset3):
+    if pos==0: continue
+    if str.endswith("?yes\n") or str.endswith("?no\n"): category = "yes_no"
+    else: category = "not_yes_no"
+    dataset3[pos] = "test,aid_" + str[:str.index(":")] + "," + category + "," + str[str.index(":")+1:str.index("?")+1] + "," + str[str.index("?")+1:]
+for pos,str in enumerate(dataset4):
+    if pos==0: continue
+    if str.endswith("?yes\n") or str.endswith("?no\n"): category = "yes_no"
+    else: category = "not_yes_no"
+    dataset4[pos] = "test,aid_" + str[:str.index(":")] + "," + category + "," + str[str.index(":")+1:str.index("?")+1] + "," + str[str.index("?")+1:]
+for pos,str in enumerate(dataset5):
+    if pos==0: continue
+    if str.endswith("?yes\n") or str.endswith("?no\n"): category = "yes_no"
+    else: category = "not_yes_no"
+    dataset5[pos] = "test,aid_" + str[:str.index(":")] + "," + category + "," + str[str.index(":")+1:str.index("?")+1] + "," + str[str.index("?")+1:]
+for pos,str in enumerate(dataset6):
+    if pos==0: continue
+    if str.endswith("?yes\n") or str.endswith("?no\n"): category = "yes_no"
+    else: category = "not_yes_no"
+    dataset6[pos] = "test,aid_" + str[:str.index(":")] + "," + category + "," + str[str.index(":")+1:str.index("?")+1] + "," + str[str.index("?")+1:]
+for pos,str in enumerate(dataset7):
+    if pos==0: continue
+    if str.endswith("?yes\n") or str.endswith("?no\n"): category = "yes_no"
+    else: category = "not_yes_no"
+    dataset7[pos] = "test,aid_" + str[:str.index(":")] + "," + category + "," + str[str.index(":")+1:str.index("?")+1] + "," + str[str.index("?")+1:]
 
-train_data_images = [x for x in train_data_images if x['active'] == True]
-train_data_questions = [x for x in train_data_questions if x['active'] == True]
-train_data_answers = [x for x in train_data_answers if x['active'] == True]
+train_data = dataset1 + dataset2[1:] + dataset3[1:]
+test_data = dataset4 + dataset5[1:] + dataset6[1:]
+val_data = dataset7
 
-test_data_images = [x for x in test_data_images if x['active'] == True]
-test_data_questions = [x for x in test_data_questions if x['active'] == True]
-test_data_answers = [x for x in test_data_answers if x['active'] == True]
-
-val_data_images = [x for x in val_data_images if x['active'] == True]
-val_data_questions = [x for x in val_data_questions if x['active'] == True]
-val_data_answers = [x for x in val_data_answers if x['active'] == True]
-
-train_df = pd.DataFrame(train_data_questions)
-train_df = train_df.merge(pd.DataFrame(train_data_answers), how='inner', suffixes=('_1', '_2'), left_on = 'id', right_on = 'question_id')
-train_df = train_df.drop(['id_1', 'id_2','date_added_1','date_added_2','people_id_1','people_id_2','active_1','active_2','question_id','answers_ids'], axis=1)
-train_df = train_df.rename(columns={"type": "category"})
-train_df.insert(0, 'mode', 'train')
-
-test_df = pd.DataFrame(test_data_questions)
-test_df = test_df.merge(pd.DataFrame(test_data_answers), how='inner', suffixes=('_1', '_2'), left_on = 'id', right_on = 'question_id')
-test_df = test_df.drop(['id_1', 'id_2','date_added_1','date_added_2','people_id_1','people_id_2','active_1','active_2','question_id','answers_ids'], axis=1)
-test_df = test_df.rename(columns={"type": "category"})
-test_df.insert(0, 'mode', 'test')
-
-val_df = pd.DataFrame(val_data_questions)
-val_df = val_df.merge(pd.DataFrame(val_data_answers), how='inner', suffixes=('_1', '_2'), left_on = 'id', right_on = 'question_id')
-val_df = val_df.drop(['id_1', 'id_2','date_added_1','date_added_2','people_id_1','people_id_2','active_1','active_2','question_id','answers_ids'], axis=1)
-val_df = val_df.rename(columns={"type": "category"})
-val_df.insert(0, 'mode', 'val')
-
-for aux in glob.glob(os.path.join(data_dir, 'Images_BEN') + "/*.tif"):
-    im = Image.open(aux)
-    out = im.convert("RGB")
-    out.save(aux[:-3] + "jpg", "JPEG", quality=100)    
-    print(aux)
-
-train_df.to_csv(os.path.join(data_dir, 'traindf.csv'), index=False)
-val_df.to_csv(os.path.join(data_dir, 'valdf.csv'), index=False)
-test_df.to_csv(os.path.join(data_dir, 'testdf.csv'), index=False)
-
+open(os.path.join(data_dir, 'traindf.csv'), 'w').writelines(train_data)
+open(os.path.join(data_dir, 'valdf.csv'), 'w').writelines(val_data)
+open(os.path.join(data_dir, 'testdf.csv'), 'w').writelines(test_data)
