@@ -48,7 +48,7 @@ val_df = val_df.drop(['id_1', 'id_2','date_added_1','date_added_2','people_id_1'
 val_df = val_df.rename(columns={"type": "category"})
 val_df.insert(0, 'mode', 'val')
 
-for aux in glob.glob(os.path.join(data_dir, 'Images_BEN') + "/*.tif"):
+for aux in glob.glob(os.path.join(data_dir, 'Images') + "/*.tif"):
     im = Image.open(aux)
     out = im.convert("RGB")
     out.save(aux[:-3] + "jpg", "JPEG", quality=100)    
