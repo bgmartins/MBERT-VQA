@@ -49,9 +49,11 @@ def load_data(args, remove = None):
     if remove is not None:
         traindf = traindf[~traindf['img_id'].isin(remove)].reset_index(drop=True)
 
-    traindf['img_id'] = traindf['img_id'].apply(lambda x: os.path.join(args.data_dir, 'Images_LR', str(x) + '.jpg'))
-    valdf['img_id'] = valdf['img_id'].apply(lambda x: os.path.join(args.data_dir, 'Images_LR', str(x) + '.jpg'))
-    testdf['img_id'] = testdf['img_id'].apply(lambda x: os.path.join(args.data_dir, 'Images_LR', str(x) + '.jpg'))
+    resolution = args.data_dir.split('/')[-1].split('_')[-1]
+    print('res',resolution)
+    traindf['img_id'] = traindf['img_id'].apply(lambda x: os.path.join(args.data_dir, f'Images_{resolution}', str(x) + '.jpg'))
+    valdf['img_id'] = valdf['img_id'].apply(lambda x: os.path.join(args.data_dir, f'Images_{resolution}', str(x) + '.jpg'))
+    testdf['img_id'] = testdf['img_id'].apply(lambda x: os.path.join(args.data_dir, f'Images_{resolution}', str(x) + '.jpg'))
     # testdf['img_id'] = testdf['img_id'].apply(lambda x: os.path.join(args.data_dir, x + '.jpg'))
 
     traindf['category'] = traindf['category'].str.lower()
@@ -673,6 +675,31 @@ def train_one_epoch(loader, model, optimizer, criterion, device, scaler, args, i
 
     return np.mean(train_loss), PREDS, acc, bleu, IMGIDS
 
+def calc_acc_and_bleu(val_df, PREDS, TARGETS,idx2ans,data_split):
+
+    total_acc = (PREDS == TARGETS).mean() * 100.
+        
+    cats=val_df['category'].unique()
+    accs = {}
+    bleu = {}
+
+    for c in cats:
+        accs[c] = (PREDS[val_df['category']==c] == TARGETS[val_df['category']==c]).mean() * 100.
+        bleu[c] = calculate_bleu_score(PREDS[val_df['category']==c],TARGETS[val_df['category']==c],idx2ans)
+
+    
+    final_accs = {}
+    final_accs[f'{data_split}_total_acc'] = np.round(total_acc,4)
+
+    final_bleus = {}
+    total_bleu = calculate_bleu_score(PREDS,TARGETS,idx2ans)
+    final_bleus[f'{data_split}_total_bleu'] = np.round(total_bleu,4)
+
+    for k,v in accs.items():
+        final_accs[f'{data_split}_{k}_acc']=np.round(v,4)
+        final_bleus[f'{data_split}_{k}_bleu']=np.round(v,4)
+    return final_accs, final_bleus
+
 def validate(loader, model, criterion, device, scaler, args, val_df, idx2ans):
 
     model.eval()
@@ -727,30 +754,11 @@ def validate(loader, model, criterion, device, scaler, args, val_df, idx2ans):
     if args.category:
         acc = (PREDS == TARGETS).mean() * 100.
         bleu = calculate_bleu_score(PREDS,TARGETS,idx2ans)
+        return val_loss, PREDS, acc, bleu 
     else:
-        total_acc = (PREDS == TARGETS).mean() * 100.
-        binary_acc = (PREDS[val_df['category']=='binary'] == TARGETS[val_df['category']=='binary']).mean() * 100.
-        plane_acc = (PREDS[val_df['category']=='plane'] == TARGETS[val_df['category']=='plane']).mean() * 100.
-        organ_acc = (PREDS[val_df['category']=='organ'] == TARGETS[val_df['category']=='organ']).mean() * 100.
-        modality_acc = (PREDS[val_df['category']=='modality'] == TARGETS[val_df['category']=='modality']).mean() * 100.
-        abnorm_acc = (PREDS[val_df['category']=='abnormality'] == TARGETS[val_df['category']=='abnormality']).mean() * 100.
+        final_accs, final_bleus  = calc_acc_and_bleu(val_df, PREDS, TARGETS,idx2ans,data_split='val')
 
-        acc = {'val_total_acc': np.round(total_acc, 4), 'val_binary_acc': np.round(binary_acc, 4), 'val_plane_acc': np.round(plane_acc, 4), 'val_organ_acc': np.round(organ_acc, 4),
-            'val_modality_acc': np.round(modality_acc, 4), 'val_abnorm_acc': np.round(abnorm_acc, 4)}
-
-        # add bleu score code
-        total_bleu = calculate_bleu_score(PREDS,TARGETS,idx2ans)
-        plane_bleu = calculate_bleu_score(PREDS[val_df['category']=='plane'],TARGETS[val_df['category']=='plane'],idx2ans)
-        binary_bleu = calculate_bleu_score(PREDS[val_df['category']=='binary'],TARGETS[val_df['category']=='binary'],idx2ans)
-        organ_bleu = calculate_bleu_score(PREDS[val_df['category']=='organ'],TARGETS[val_df['category']=='organ'],idx2ans)
-        modality_bleu = calculate_bleu_score(PREDS[val_df['category']=='modality'],TARGETS[val_df['category']=='modality'],idx2ans)
-        abnorm_bleu = calculate_bleu_score(PREDS[val_df['category']=='abnormality'],TARGETS[val_df['category']=='abnormality'],idx2ans)
-
-
-        bleu = {'val_total_bleu': np.round(total_bleu, 4), 'val_binary_bleu': np.round(binary_bleu, 4), 'val_plane_bleu': np.round(plane_bleu, 4), 'val_organ_bleu': np.round(organ_bleu, 4),
-            'val_modality_bleu': np.round(modality_bleu, 4), 'val_abnorm_bleu': np.round(abnorm_bleu, 4)}
-       
-    return val_loss, PREDS, acc, bleu
+    return val_loss, PREDS, final_accs, final_bleus 
 
 def test(loader, model, criterion, device, scaler, args, val_df,idx2ans):
 
@@ -802,31 +810,11 @@ def test(loader, model, criterion, device, scaler, args, val_df,idx2ans):
     if args.category:
         acc = (PREDS == TARGETS).mean() * 100.
         bleu = calculate_bleu_score(PREDS,TARGETS,idx2ans)
+        return test_loss, PREDS, acc, bleu
     else:
-        total_acc = (PREDS == TARGETS).mean() * 100.
-        binary_acc = (PREDS[val_df['category']=='binary'] == TARGETS[val_df['category']=='binary']).mean() * 100.
-        plane_acc = (PREDS[val_df['category']=='plane'] == TARGETS[val_df['category']=='plane']).mean() * 100.
-        organ_acc = (PREDS[val_df['category']=='organ'] == TARGETS[val_df['category']=='organ']).mean() * 100.
-        modality_acc = (PREDS[val_df['category']=='modality'] == TARGETS[val_df['category']=='modality']).mean() * 100.
-        abnorm_acc = (PREDS[val_df['category']=='abnormality'] == TARGETS[val_df['category']=='abnormality']).mean() * 100.
+        final_accs, final_bleus  = calc_acc_and_bleu(val_df, PREDS, TARGETS,idx2ans,data_split='test')
 
-        acc = {'total_acc': np.round(total_acc, 4), 'binary_acc': np.round(binary_acc, 4), 'plane_acc': np.round(plane_acc, 4), 'organ_acc': np.round(organ_acc, 4),
-               'modality_acc': np.round(modality_acc, 4), 'abnorm_acc': np.round(abnorm_acc, 4)}
-
-        # add bleu score code
-        total_bleu = calculate_bleu_score(PREDS,TARGETS,idx2ans)
-        binary_bleu = calculate_bleu_score(PREDS[val_df['category']=='binary'],TARGETS[val_df['category']=='binary'],idx2ans)
-        plane_bleu = calculate_bleu_score(PREDS[val_df['category']=='plane'],TARGETS[val_df['category']=='plane'],idx2ans)
-        organ_bleu = calculate_bleu_score(PREDS[val_df['category']=='organ'],TARGETS[val_df['category']=='organ'],idx2ans)
-        modality_bleu = calculate_bleu_score(PREDS[val_df['category']=='modality'],TARGETS[val_df['category']=='modality'],idx2ans)
-        abnorm_bleu = calculate_bleu_score(PREDS[val_df['category']=='abnormality'],TARGETS[val_df['category']=='abnormality'],idx2ans)
-
-
-        bleu = {'total_bleu': np.round(total_bleu, 4),  'binary_bleu': np.round(binary_bleu, 4), 'plane_bleu': np.round(plane_bleu, 4), 'organ_bleu': np.round(organ_bleu, 4),
-            'modality_bleu': np.round(modality_bleu, 4), 'abnorm_bleu': np.round(abnorm_bleu, 4)}
-
-
-    return test_loss, PREDS, acc, bleu
+    return test_loss, PREDS, final_accs, final_bleus
 
 def final_test(loader, all_models, device, args, val_df, idx2ans):
 
