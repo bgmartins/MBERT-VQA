@@ -257,7 +257,7 @@ if __name__ == '__main__':
         #save by val loss
         if val_loss < best_loss:
             print('Saving model by loss')
-            torch.save(model.state_dict(), os.path.join(args.save_dir, args.task , args.run_name + "_loss" + '.pt'))
+            torch.save(model.state_dict(), os.path.join(args.save_dir, args.run_name + "_loss" + '.pt'))
             best_loss = val_loss
 
         #save by accuracy in val
@@ -265,14 +265,14 @@ if __name__ == '__main__':
 
             if val_acc['val_total_acc'] > best_acc1:
                 print('Saving model')
-                torch.save(model.state_dict(), os.path.join(args.save_dir, args.task , args.run_name + '.pt'))
+                torch.save(model.state_dict(), os.path.join(args.save_dir, args.run_name + '.pt'))
                 best_acc1=val_acc['val_total_acc']
 
         else:
 
             if val_acc['val_' + args.category + '_acc'] > best_acc1:
                 print('Saving model')
-                torch.save(model.state_dict(), os.path.join(args.save_dir, args.task , args.run_name + '.pt'))
+                torch.save(model.state_dict(), os.path.join(args.save_dir, args.run_name + '.pt'))
                 best_acc1 = val_acc['val_' + args.category + '_acc'] 
 
         # if (epoch + 1) % args.save_model_epoch == 0:
