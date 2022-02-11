@@ -4,7 +4,7 @@ import os
 import glob
 from PIL import Image
 
-data_dir = os.path.join('..', 'datasets/RSVQA_LR')
+data_dir = os.path.join('..', 'Remote_Sensing_Datasets/RSVQA_LR')
 
 train_data_images = json.load(open(os.path.join(data_dir, 'LR_split_train_images.json')))["images"]
 train_data_questions = json.load(open(os.path.join(data_dir, 'LR_split_train_questions.json')))["questions"]
