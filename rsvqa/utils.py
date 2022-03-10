@@ -675,6 +675,31 @@ def train_one_epoch(loader, model, optimizer, criterion, device, scaler, args, i
 
     return np.mean(train_loss), PREDS, acc, bleu, IMGIDS
 
+#calc mock results for testing/debugging
+def calc_MOCK_acc_and_bleu(val_df, PREDS, TARGETS,idx2ans,data_split):
+    total_acc = 0.85 * 100.
+        
+    cats=val_df['category'].unique()
+    accs = {}
+    bleu = {}
+
+    for c in cats:
+        accs[c] = 0.80 * 100.
+        bleu[c] = 0.70 * 100.
+
+    
+    final_accs = {}
+    final_accs[f'{data_split}_total_acc'] = np.round(total_acc,4)
+
+    final_bleus = {}
+    total_bleu = 0.85
+    final_bleus[f'{data_split}_total_bleu'] = np.round(total_bleu,4)
+
+    for k,v in accs.items():
+        final_accs[f'{data_split}_{k}_acc']=np.round(v,4)
+        final_bleus[f'{data_split}_{k}_bleu']=np.round(v,4)
+    return final_accs, final_bleus
+
 def calc_acc_and_bleu(val_df, PREDS, TARGETS,idx2ans,data_split):
 
     total_acc = (PREDS == TARGETS).mean() * 100.
@@ -768,7 +793,8 @@ def test(loader, model, criterion, device, scaler, args, val_df,idx2ans):
     PREDS = []
     TARGETS = []
 
-    test_loss = []
+    #test_loss = []
+    #c= 0
 
     with torch.no_grad():
         for (img,question_token,segment_ids,attention_mask,target, _) in tqdm(loader, leave=False):
@@ -780,18 +806,18 @@ def test(loader, model, criterion, device, scaler, args, val_df,idx2ans):
             if args.mixed_precision:
                 with torch.cuda.amp.autocast():
                     logits, _, _ = model(img, question_token, segment_ids, attention_mask)
-                    loss = criterion(logits, target)
+                    #loss = criterion(logits, target)
             else:
                 logits, _, _ = model(img, question_token, segment_ids, attention_mask)
-                if args.smoothing:
-                    loss = criterion(logits, target,0)
-                else:
-                    loss = criterion(logits, target)
+                # if args.smoothing:
+                #     loss = criterion(logits, target,0)
+                # else:
+                #     loss = criterion(logits, target)
 
 
-            loss_np = loss.detach().cpu().numpy()
+            #loss_np = loss.detach().cpu().numpy()
 
-            test_loss.append(loss_np)
+            #test_loss.append(loss_np)
 
             pred = logits.softmax(1).argmax(1).detach()
 
@@ -802,7 +828,12 @@ def test(loader, model, criterion, device, scaler, args, val_df,idx2ans):
             # else:
             TARGETS.append(target)
 
-        test_loss = np.mean(test_loss)
+            # if c ==3:
+            #     break
+            # c+=1
+            
+
+        #test_loss = np.mean(test_loss)
 
     PREDS = torch.cat(PREDS).cpu().numpy()
     TARGETS = torch.cat(TARGETS).cpu().numpy()
@@ -810,11 +841,13 @@ def test(loader, model, criterion, device, scaler, args, val_df,idx2ans):
     if args.category:
         acc = (PREDS == TARGETS).mean() * 100.
         bleu = calculate_bleu_score(PREDS,TARGETS,idx2ans)
-        return test_loss, PREDS, acc, bleu
+        return PREDS, acc, bleu
+        #return test_loss, PREDS, acc, bleu
     else:
         final_accs, final_bleus  = calc_acc_and_bleu(val_df, PREDS, TARGETS,idx2ans,data_split='test')
 
-    return test_loss, PREDS, final_accs, final_bleus
+    return PREDS, final_accs, final_bleus
+    #return test_loss, PREDS, final_accs, final_bleus
 
 def final_test(loader, all_models, device, args, val_df, idx2ans):
 

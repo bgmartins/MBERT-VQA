@@ -26,6 +26,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--run_name', type = str, required = True, help = "run name for wandb")
     parser.add_argument('--data_dir', type = str, required = False, default = "../ImageClef-2019-VQA-Med", help = "path for data")
+    parser.add_argument('--phili_dataset', action = 'store_true', default = False, help = "flag for phili dataset evaluation")
     parser.add_argument('--model_dir', type = str, required = False, default = "../ImageClef-2019-VQA-Med/mmbert/MLM/vqamed-roco-1_acc.pt", help = "path to load weights")
     parser.add_argument('--save_dir', type = str, required = False, default = "../ImageClef-2019-VQA-Med/mmbert", help = "path to save weights")
     parser.add_argument('--category', type = str, required = False, default = None,  help = "choose specific category if you want")
@@ -64,11 +65,15 @@ if __name__ == '__main__':
     parser.add_argument('--cnn_encoder', type=str, default='resnet152', help='name of the cnn encoder')
     parser.add_argument('--use_relu', action = 'store_true', default = False, help = "use ReLu")
     parser.add_argument('--transformer_model', type=str, default='transformer',choices=['transformer', 'realformer', 'feedback-transformer'], help='name of the transformer model')
+    parser.add_argument('--wandb', action = 'store_false', default = True, help = "record in wandb or not")
 
     args = parser.parse_args()
     
     model_name = args.model_dir.split('/')[-1]
-    wandb.init(project='medvqa', name = 'testing-'+model_name, config = args) #args.run_name
+    ds = 'phili' if args.phili_dataset else 'testset'
+    print('Using wandb',args.wandb)
+    if args.wandb:
+        wandb.init(project='rs-vqa', name = f'eval-{model_name}-{ds}', config = args) #args.run_name
 
     seed_everything(args.seed)
 
@@ -102,6 +107,30 @@ if __name__ == '__main__':
 
     train_df = pd.concat([train_df, val_df]).reset_index(drop=True)
 
+    if args.phili_dataset:
+        print('Testing on phili dataset')
+        philidf = pd.read_csv(os.path.join(args.data_dir, 'testdf_phili.csv'))
+        phili_ans_unique = list(philidf['answer'].unique())
+
+        #remain the original mapping from answer to id and add the new answers from the phili_df
+        not_common = [a for a in phili_ans_unique if a not in ans2idx]
+        phili_ans2idx = {ans:num_classes + idx for idx,ans in enumerate(not_common)} #new answer ids start at the end of the original ones
+
+        #rewrite over the original mappings and testdf
+        ans2idx = {**ans2idx, **phili_ans2idx} #merge mappings
+        idx2ans = {idx:ans for ans,idx in ans2idx.items()}
+        philidf['answer'] = philidf['answer'].map(ans2idx).astype(int)
+
+        #update path to imgs
+        philidf['img_id'] = philidf['img_id'].apply(lambda x: os.path.join(args.data_dir, f'Images_HR', str(x) + '.jpg'))
+        test_df = philidf
+        
+
+    else:
+        print('Testing on orig test set')
+    
+    #import IPython; IPython.embed(); exit(0)
+    
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     model = Model(args)
@@ -109,12 +138,12 @@ if __name__ == '__main__':
     model.classifier[2] = nn.Linear(args.hidden_size, num_classes)
 
     print('Loading model at ', args.model_dir)
-    model.load_state_dict(torch.load(args.model_dir))
+    model.load_state_dict(torch.load(args.model_dir)) #,map_location=torch.device('cpu')
 
-        
     model.to(device)
 
-    wandb.watch(model, log='all')
+    if args.wandb:
+        wandb.watch(model, log='all')
 
 
     optimizer = optim.Adam(model.parameters(),lr=args.lr)
@@ -145,37 +174,26 @@ if __name__ == '__main__':
     best_loss = np.inf
     counter = 0
 
-    test_loss, predictions, acc, bleu = test(testloader, model, criterion, device, scaler, args, test_df,idx2ans)
+    predictions, acc, bleu = test(testloader, model, criterion, device, scaler, args, test_df,idx2ans)
+    #test_loss, predictions, acc, bleu = test(testloader, model, criterion, device, scaler, args, test_df,idx2ans)
 
-    wandb.log({
-                'test_loss': test_loss,
-                'learning_rate': optimizer.param_groups[0]["lr"],
-
-                'total_bleu':    bleu['total_bleu'],
-                'binary_bleu':   bleu['binary_bleu'],
-                'plane_bleu':    bleu['plane_bleu'],
-                'organ_bleu':    bleu['organ_bleu'],
-                'modality_bleu': bleu['modality_bleu'],
-                'abnorm_bleu':   bleu['abnorm_bleu'],
-
-                'total_acc':    acc['total_acc'],
-                'binary_acc':   acc['binary_acc'],
-                'plane_acc':    acc['plane_acc'],
-                'organ_acc':    acc['organ_acc'],
-                'modality_acc': acc['modality_acc'],
-                'abnorm_acc':   acc['abnorm_acc']
-                
-            })
-
-    
+    res = {
+            #'test_loss': test_loss,
+            'learning_rate': optimizer.param_groups[0]["lr"],
+            **bleu,
+            **acc,               
+        }
+    if args.wandb:
+        wandb.log(res)
+    #test_df = test_df[:16]
     test_df['preds'] = predictions
     test_df['decode_preds'] = test_df['preds'].map(idx2ans)
     test_df['decode_ans'] = test_df['answer'].map(idx2ans)
-    test_df.to_csv(f'../ImageClef-2019-VQA-Med/mmbert/{model_name}_preds.csv', index = False)
+    test_df.to_csv(f'{args.save_dir}/{model_name}_preds.csv', index = False)
     
     result = test_df[['img_id', 'decode_preds']]
     result['img_id'] = result['img_id'].apply(lambda x: x.split('/')[-1].split('.')[0])
-    result.to_csv(f'../ImageClef-2019-VQA-Med/mmbert/{model_name}_res.txt', index = False, header=False, sep='|')
+    result.to_csv(f'{args.save_dir}/{model_name}_res.txt', index = False, header=False, sep='|')
     print('acc', acc)
     print('bleu', bleu)
 
