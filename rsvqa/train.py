@@ -221,7 +221,8 @@ if __name__ == '__main__':
 
         train_loss, _, _, _, _ = train_one_epoch(trainloader, model, optimizer, criterion, device, scaler, args, idx2ans)
         val_loss, predictions, val_acc, val_bleu = validate(valloader, model, criterion, device, scaler, args, val_df,idx2ans)
-        test_loss, predictions, acc, bleu = test(testloader, model, criterion, device, scaler, args, test_df,idx2ans)
+        predictions, acc, bleu = test(testloader, model, criterion, device, scaler, args, test_df,idx2ans)
+        #test_loss, predictions, acc, bleu = test(testloader, model, criterion, device, scaler, args, test_df,idx2ans)
 
         scheduler.step(val_loss)
      
@@ -236,7 +237,7 @@ if __name__ == '__main__':
             if args.wandb:
                 log_dict['train_loss'] = train_loss
                 log_dict['val_loss'] = val_loss
-                log_dict['test_loss'] = test_loss
+                #log_dict['test_loss'] = test_loss
                 log_dict['learning_rate'] = optimizer.param_groups[0]["lr"]
                 log_dict['val_total_acc'] = val_acc['val_total_acc']
 
@@ -247,7 +248,7 @@ if __name__ == '__main__':
             if args.wandb:
                 wandb.log({'train_loss': train_loss,
                         'val_loss': val_loss,
-                        'test_loss': test_loss,
+                        #'test_loss': test_loss,
                         'learning_rate': optimizer.param_groups[0]["lr"],
                         f'val_{args.category}_acc': val_acc,
                         f'val_{args.category}_bleu': val_bleu,
