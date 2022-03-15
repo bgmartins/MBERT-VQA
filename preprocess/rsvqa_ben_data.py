@@ -48,13 +48,16 @@ val_df = val_df.drop(['id_1', 'id_2','date_added_1','date_added_2','people_id_1'
 val_df = val_df.rename(columns={"type": "category"})
 val_df.insert(0, 'mode', 'val')
 
+train_df.to_csv(os.path.join(data_dir, 'traindf.csv'), index=False)
+val_df.to_csv(os.path.join(data_dir, 'valdf.csv'), index=False)
+test_df.to_csv(os.path.join(data_dir, 'testdf.csv'), index=False)
+
+print('dfs processed')
+
 for aux in glob.glob(os.path.join(data_dir, 'Images') + "/*.tif"):
     im = Image.open(aux)
     out = im.convert("RGB")
     out.save(aux[:-3] + "jpg", "JPEG", quality=100)    
     print(aux)
 
-train_df.to_csv(os.path.join(data_dir, 'traindf.csv'), index=False)
-val_df.to_csv(os.path.join(data_dir, 'valdf.csv'), index=False)
-test_df.to_csv(os.path.join(data_dir, 'testdf.csv'), index=False)
 
