@@ -171,10 +171,9 @@ if __name__ == '__main__':
 
     train_tfm = transforms.Compose([
                                     
-                                    #transforms.ToPILImage(),
-                                    #transforms.Resize([224,224]),
-                                    transforms.Resize(224), 
-                                    transforms.CenterCrop(224), 
+                                    
+                                    # transforms.Resize(224),           images are resized at preprocessing
+                                    # transforms.CenterCrop(224), 
                                     transforms.RandomResizedCrop(224,scale=(0.75,1.25),ratio=(0.75,1.25)),
                                     transforms.RandomRotation(10),
                                     # Cutout(),
@@ -183,17 +182,15 @@ if __name__ == '__main__':
                                     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
 
-    val_tfm = transforms.Compose([#transforms.ToPILImage(),
-                                #transforms.Resize([224,224]),
-                                transforms.Resize(224),
-                                transforms.CenterCrop(224),
+    val_tfm = transforms.Compose([
+                                # transforms.Resize(224),
+                                # transforms.CenterCrop(224),
                                 transforms.ToTensor(), 
                                 transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-    test_tfm = transforms.Compose([#transforms.ToPILImage(),
-                                #transforms.Resize([224,224]),
-                                transforms.Resize(224),
-                                transforms.CenterCrop(224),
+    test_tfm = transforms.Compose([
+                                # transforms.Resize(224),
+                                # transforms.CenterCrop(224),
                                 transforms.ToTensor(), 
                                  transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
