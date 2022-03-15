@@ -49,11 +49,11 @@ def load_data(args, remove = None):
     if remove is not None:
         traindf = traindf[~traindf['img_id'].isin(remove)].reset_index(drop=True)
 
-    resolution = args.data_dir.split('/')[-1].split('_')[-1]
-    print('res',resolution)
-    traindf['img_id'] = traindf['img_id'].apply(lambda x: os.path.join(args.data_dir, f'Images_{resolution}', str(x) + '.jpg'))
-    valdf['img_id'] = valdf['img_id'].apply(lambda x: os.path.join(args.data_dir, f'Images_{resolution}', str(x) + '.jpg'))
-    testdf['img_id'] = testdf['img_id'].apply(lambda x: os.path.join(args.data_dir, f'Images_{resolution}', str(x) + '.jpg'))
+    # resolution = args.data_dir.split('/')[-1].split('_')[-1]
+    print('res',args.data_dir)
+    traindf['img_id'] = traindf['img_id'].apply(lambda x: os.path.join(args.data_dir, f'Images_Resized', str(x) + '.jpg'))
+    valdf['img_id'] = valdf['img_id'].apply(lambda x: os.path.join(args.data_dir, f'Images_Resized', str(x) + '.jpg'))
+    testdf['img_id'] = testdf['img_id'].apply(lambda x: os.path.join(args.data_dir, f'Images_Resized', str(x) + '.jpg'))
     # testdf['img_id'] = testdf['img_id'].apply(lambda x: os.path.join(args.data_dir, x + '.jpg'))
 
     traindf['category'] = traindf['category'].str.lower()
