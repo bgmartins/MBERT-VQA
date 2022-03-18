@@ -134,6 +134,40 @@ def crop(img):
     return img
 
 
+def map_and_dropnans(df, ans2idx):
+    df['answer'] = df['answer'].map(ans2idx)
+    df = df.dropna().reset_index(drop=True)
+    df['answer'] = df['answer'].astype(int)
+    return df
+
+def map_answer_2_ids(train_df,val_df,test_df,args):
+
+    #combine answers from all data splits and have the output neuron size equal to all possible answers
+    if args.map_answers == 'combine':
+        df = pd.concat([train_df, val_df, test_df]).reset_index(drop=True)
+        ans2idx = {ans:idx for idx,ans in enumerate(df['answer'].unique())}
+        idx2ans = {idx:ans for ans,idx in ans2idx.items()}
+        df['answer'] = df['answer'].map(ans2idx).astype(int)
+        
+        train_df = df[df['mode']=='train'].reset_index(drop=True)
+        val_df = df[df['mode']=='val'].reset_index(drop=True)
+        test_df = df[df['mode']=='test'].reset_index(drop=True)
+
+    #output neuron size equal to 1000 top most frequent answer and have a neuron for the rest
+    elif args.map_answers == 'top1000':
+        answers=list(train_df['answer'].value_counts()[:1000].index)
+        ans2idx = {ans:idx for idx,ans in enumerate(answers)}
+        idx2ans = {idx:ans for ans,idx in ans2idx.items()}
+
+        #top-1000 labels from training set from 0 to 999, drop the rest
+        train_df = map_and_dropnans(train_df, ans2idx)
+        val_df = map_and_dropnans(val_df, ans2idx)
+        test_df = map_and_dropnans(test_df, ans2idx)
+        
+        # val_df['answer'] = val_df['answer'].map(ans2idx).fillna(1000).astype(int) 
+        
+    return train_df, val_df, test_df, ans2idx, idx2ans
+
 class VQAMed(Dataset):
     def __init__(self, df, imgsize, tfm, args, mode): #mode = 'train'
         self.df = df
