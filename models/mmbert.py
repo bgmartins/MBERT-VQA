@@ -12,12 +12,6 @@ import numpy as np
 import torch.nn.functional as F
 import timm
 
-class A:
-  def __init__(self,a):
-    self.a=a
-  
-  def method(self):
-    print("aa",self.a)
 
 def get_bert_model(args):
     if args.task == 'distillation':
@@ -65,19 +59,6 @@ class TransformerAbstract(nn.Module):
             for i in range(len(h)):
                 h[i][n] = v[i]
         return h
-
-
-        # v_2, v_3, v_4, v_5, v_7 = self.trans(img)
-        # for i in range(len(h)):
-        #     h[i][1] = v_2[i]
-        # for i in range(len(h)):
-        #     h[i][2] = v_3[i]
-        # for i in range(len(h)):
-        #     h[i][3] = v_4[i]
-        # for i in range(len(h)):
-        #     h[i][4] = v_5[i]
-        # for i in range(len(h)):
-        #     h[i][5] = v_7[i]
         
 
 class Transformer(TransformerAbstract):
@@ -104,7 +85,7 @@ class RealFormer(TransformerAbstract):
         h = self.prepare_input(img, input_ids, token_type_ids, mask)
         prev = None
         for resencoder in self.mains:
-            h, prev = resencoder(h, prev = prev)
+            h, prev = resencoder(h, prev = prev, mask = mask)
         return h
 
 class FeedBackTransformer(TransformerAbstract):
@@ -162,71 +143,12 @@ class Model(nn.Module):
 
         elif self.dataset == 'VQA-Med':
             h = self.transformer(img, input_ids, segment_ids, input_mask)
-            pooled_h = self.activ1(self.fc1(h.mean(1)))
+            pooled_h = self.activ1(self.fc1(mean_pooling(h, input_mask)))
             logits = self.classifier(pooled_h)
             return logits, 0,0
-'''
-class Transformer(nn.Module):
-    def __init__(self, args):
-        super(Transformer,self).__init__()
-        bert_name = get_bert_model(args)
-
-        base_model = AutoModel.from_pretrained(bert_name)
-        bert_model = nn.Sequential(*list(base_model.children())[0:])
-        self.bert_embedding = bert_model[0]
-#         self.embed = Embeddings(args)
-        self.trans = get_transfer(args)
-        self.blocks = BertLayer(args,share='none', norm='pre')
-        self.n_layers = args.n_layers
-    def forward(self, img, input_ids, token_type_ids, mask):
-        v_2, v_3, v_4, v_5, v_7 = self.trans(img)
-#         h = self.embed(input_ids, token_type_ids)
-        #print('shape input_ids',input_ids.shape)
-        h = self.bert_embedding(input_ids=input_ids, token_type_ids=token_type_ids, position_ids=None)
-        #print('h', h.shape)
-        for i in range(len(h)):
-            h[i][1] = v_2[i]
-        for i in range(len(h)):
-            h[i][2] = v_3[i]
-        for i in range(len(h)):
-            h[i][3] = v_4[i]
-        for i in range(len(h)):
-            h[i][4] = v_5[i]
-        for i in range(len(h)):
-            h[i][5] = v_7[i]
-        for i in range(self.n_layers):
-            h = self.blocks(h, mask, i)
-        return h
 
 
-class RealFormer(nn.Module):
-    def __init__(self,args):
-        super().__init__()
-        bert_name = get_bert_model(args)
-
-        base_model = AutoModel.from_pretrained(bert_name)
-        bert_model = nn.Sequential(*list(base_model.children())[0:])
-        self.bert_embedding = bert_model[0]
-#         self.embed = Embeddings(args)
-        self.trans = get_transfer(args)
-        head_cnt = 8
-        self.mains = nn.Sequential(*[ResEncoderBlock(emb_s = args.hidden_size // head_cnt, head_cnt = head_cnt, dp1 = 0.1, dp2 = 0.1) for _ in range(args.n_layers)])
-    def forward(self, img, input_ids, token_type_ids, mask):
-        v_2, v_3, v_4, v_5, v_7 = self.trans(img)
-        h = self.bert_embedding(input_ids=input_ids, token_type_ids=token_type_ids, position_ids=None)
-        for i in range(len(h)):
-            h[i][1] = v_2[i]
-        for i in range(len(h)):
-            h[i][2] = v_3[i]
-        for i in range(len(h)):
-            h[i][3] = v_4[i]
-        for i in range(len(h)):
-            h[i][4] = v_5[i]
-        for i in range(len(h)):
-            h[i][5] = v_7[i]
-
-        prev = None
-        for resencoder in self.mains:
-            h, prev = resencoder(h, prev = prev)
-        return h
-'''
+def mean_pooling(token_embeddings, attention_mask):
+    # this is for an huggingface model -> token_embeddings = model_output[0] #First element of model_output contains all token embeddings
+    input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+    return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
