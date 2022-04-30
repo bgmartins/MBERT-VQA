@@ -55,6 +55,8 @@
 #rm -rf main.zip RSIVQA-main
 #cd ..
 
+#UCM http://weegee.vision.ucmerced.edu/datasets/UCMerced_LandUse.zip
+
 #cd preprocess
 #python3 rsvqa_lr_data.py
 #python3 rsvqa_hr_data.py

@@ -1,5 +1,5 @@
 import argparse
-from utils import seed_everything, VQAMed, train_one_epoch, validate, test, load_data, LabelSmoothing
+from utils import seed_everything, VQAMed, train_one_epoch, validate, test, load_data, LabelSmoothing, map_answer_2_ids
 import wandb
 import pandas as pd
 import numpy as np
@@ -40,6 +40,7 @@ if __name__ == '__main__':
     parser.add_argument('--train_pct', type = float, required = False, default = 1.0, help = "fraction of train samples to select")
     parser.add_argument('--valid_pct', type = float, required = False, default = 1.0, help = "fraction of validation samples to select")
     parser.add_argument('--test_pct', type = float, required = False, default = 1.0, help = "fraction of test samples to select")
+    parser.add_argument('--map_answers', type=str, required = True,default='combine', choices=['combine', 'top1000'], help='how to map answers to indices for VQA as classification problem')
 
     parser.add_argument('--max_position_embeddings', type = int, required = False, default = 28, help = "max length of sequence")
     parser.add_argument('--batch_size', type = int, required = False, default = 16, help = "batch size")
@@ -80,26 +81,7 @@ if __name__ == '__main__':
 
     train_df, val_df, test_df = load_data(args)
 
-
-    if args.category:
-            
-        train_df = train_df[train_df['category']==args.category].reset_index(drop=True)
-        val_df = val_df[val_df['category']==args.category].reset_index(drop=True)
-        test_df = test_df[test_df['category']==args.category].reset_index(drop=True)
-
-
-    df = pd.concat([train_df, val_df, test_df]).reset_index(drop=True)
-
-    ans2idx = {ans:idx for idx,ans in enumerate(df['answer'].unique())}
-    idx2ans = {idx:ans for ans,idx in ans2idx.items()}
-
-
-
-
-    df['answer'] = df['answer'].map(ans2idx).astype(int)
-    train_df = df[df['mode']=='train'].reset_index(drop=True)
-    val_df = df[df['mode']=='val'].reset_index(drop=True)
-    test_df = df[df['mode']=='test'].reset_index(drop=True)
+    train_df, val_df, test_df, ans2idx, idx2ans = map_answer_2_ids(train_df,val_df,test_df,args)
 
     num_classes = len(ans2idx)
 
