@@ -2,7 +2,7 @@
 # https://medium.com/@stepanulyanin/implementing-grad-cam-in-pytorch-ea0937c31e82
 
 import argparse
-from utils import seed_everything, load_data,encode_text #,Model
+from utils import seed_everything, load_data,encode_text, map_answer_2_ids #,Model
 import wandb
 import pandas as pd
 import numpy as np
@@ -16,9 +16,11 @@ from torchvision import transforms
 from models.mmbert import Model, get_transformer_model
 
 from transformers import BertTokenizer
-from PIL import Image
 
+from PIL import Image
 import cv2
+from matplotlib import pyplot as plt
+
 import timm
 import os
 import matplotlib.pyplot as plt
@@ -59,6 +61,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Pretrain on ROCO with MLM")
     parser.add_argument('--data_dir', type = str, required = False, default = "../ImageClef-2019-VQA-Med", help = "path for data")
     parser.add_argument('--model_dir', type = str, required = False, default = "../ImageClef-2019-VQA-Med/mmbert/MLM/vqa-sentence_transformers-allmpnet48-2.pt", help = "path to load weights")
+    parser.add_argument('--dataset_name', type = str, required = True, default = "LR", choices=['LR','HR','BEN'], help = "dataset name")
+    parser.add_argument('--map_answers', type=str, required = True,default='combine', choices=['combine', 'top1000'], help='how to map answers to indices for VQA as classification problem')
     
     parser.add_argument('--cnn_encoder', type=str, default='tf_efficientnetv2_m', help='name of the cnn encoder')
     parser.add_argument('--use_relu', action = 'store_true', default = False, help = "use ReLu")
@@ -83,8 +87,8 @@ if __name__ == '__main__':
     parser.add_argument('--test_pct', type = float, required = False, default = 1.0, help = "fraction of test samples to select")
     parser.add_argument('--max_position_embeddings', type = int, required = False, default = 28, help = "max length of sequence")
     
-    parser.add_argument('--vqa_img', type=str, default = 'synpic371.jpg', help="path to vqa img", required = False)
-    parser.add_argument('--category', type=str, default = 'organ', choices=['organ','modality','plane','abnormality','binary'], help="question category", required = False)
+    parser.add_argument('--vqa_img_name', type=str, default = 'synpic371.jpg', help="path to vqa img", required = False)
+    parser.add_argument('--category', type=str, default = 'organ', help="question category", required = False)
     parser.add_argument('--mode', type=str, default = 'Train', choices=['Train', 'Val', 'Test'], help="data split", required = False)
     parser.add_argument('--grad_cam', action='store_false', required = False, default = True,  help='flag to save model input_tensor')
     parser.add_argument('--save_dir', type = str, required = False, default = "./gradcam-images", help = "path to save gradcam images")
@@ -96,14 +100,9 @@ if __name__ == '__main__':
 
 
     train_df, val_df, test_df = load_data(args)
+    #import IPython; IPython.embed(); exit(0)
+    train_df, val_df, test_df, ans2idx, idx2ans = map_answer_2_ids(train_df,val_df,test_df,args)
     df = pd.concat([train_df, val_df, test_df]).reset_index(drop=True)
-
-    ans2idx = {ans:idx for idx,ans in enumerate(df['answer'].unique())}
-    idx2ans = {idx:ans for ans,idx in ans2idx.items()}
-    df['answer'] = df['answer'].map(ans2idx).astype(int)
-    train_df = df[df['mode']=='train'].reset_index(drop=True)
-    val_df = df[df['mode']=='val'].reset_index(drop=True)
-    test_df = df[df['mode']=='test'].reset_index(drop=True)
 
     num_classes = len(ans2idx)
 
@@ -111,12 +110,15 @@ if __name__ == '__main__':
     print('numclasses',num_classes)
 
 
-    img_path = os.path.join(args.data_dir,args.mode,'images',args.vqa_img)
+    img_path = os.path.join(args.data_dir,'Images_Resized',args.vqa_img_name)
     info_df=df.loc[df['img_id'] == img_path]
 
     category_df=info_df.loc[info_df['category'] == args.category]
     if category_df['question'].empty:
         raise ValueError('Image does not exist in data split.')
+    
+    category_df = category_df.sample(n=1) # for now get random question/answer pair given image + question type
+
     question = category_df['question'].item()
     answer = category_df['answer'].item()
 
@@ -126,8 +128,9 @@ if __name__ == '__main__':
     model.eval()
 
     img = Image.open(img_path).convert('RGB')
-    tfm = transforms.Compose([transforms.Resize(224),
-                                transforms.CenterCrop(224),
+    display(img)
+    tfm = transforms.Compose([#transforms.Resize(224), #images already resized in preprocessing before
+                              #  transforms.CenterCrop(224),
                                 transforms.ToTensor(), 
                                 transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
     img = tfm(img)
@@ -185,9 +188,22 @@ if __name__ == '__main__':
     heatmap = np.uint8(255 * heatmap)
     heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
     superimposed_img = heatmap * 0.4 + img
-    cv2.imwrite(os.path.join(args.save_dir,args.category+"_"+args.vqa_img), superimposed_img)
+    cv2.imwrite(os.path.join(args.save_dir,f'{args.dataset_name}_{args.category}_{args.vqa_img_name}'), superimposed_img)
 
     res = logits.softmax(1).argmax(1).detach()
+    #import IPython; IPython.embed(); exit(0)
+    #from matplotlib.pyplot import imshow
+
+    # fig, ax = plt.subplots(1,2)
+    # ax[0].imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+    #plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(np.uint8))
+    # superimposed_img = superimposed_img.astype(np.uint8)
+    # display(Image.fromarray(cv2.cvtColor(superimposed_img, cv2.COLOR_BGR2RGB)))
+    #plt.imshow(cv2.cvtColor(superimposed_img, cv2.COLOR_BGR2RGB).astype(np.uint8))
+    # ax[1].imshow(superimposed_img)
+    # fig.tight_layout()
+    #plt.show()
+    #Image.fromarray(np.hstack((np.array(img),np.array(superimposed_img)))).show()
     print('question: ', question)
     print('answer: ', answer, idx2ans[answer])
     print('preds:', res, idx2ans[res.item()])
