@@ -48,7 +48,7 @@ if __name__ == '__main__':
         cax = ax.matshow(np.log(mat+1), cmap="YlGn")
         
         colorbar_ticks = np.array([0,2,4,6,8,10,12,14])
-        cbar = fig.colorbar(cax)
+        cbar = fig.colorbar(cax, fraction=0.046, pad=0.04)
         cbar.set_ticks(colorbar_ticks)
         cbar.set_ticklabels(['{:.0f}'.format(x) for x in np.exp(colorbar_ticks)-1])
         
@@ -61,6 +61,7 @@ if __name__ == '__main__':
         plt.xlabel('Predicted')
         plt.ylabel('True')
 
+        plt.tight_layout()
         fig.savefig(args.save_dir+'confusion_matrix_' + dataset + "_" + str(len(idx)) + '.svg')
         plt.show()
         
