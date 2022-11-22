@@ -65,7 +65,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', type=str, default='VQA-Med', help='roco or vqamed2019')
     parser.add_argument('--cnn_encoder', type=str, default='resnet152', help='name of the cnn encoder')
     parser.add_argument('--use_relu', action = 'store_true', default = False, help = "use ReLu")
-    parser.add_argument('--transformer_model', type=str, default='transformer',choices=['transformer', 'realformer', 'feedback-transformer'], help='name of the transformer model')
+    parser.add_argument('--transformer_model', type=str, default='transformer',choices=['transformer', 'realformer', 'feedback-transformer','compositional'], help='name of the transformer model')
     parser.add_argument('--wandb', action = 'store_false', default = True, help = "record in wandb or not")
 
     args = parser.parse_args()

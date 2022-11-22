@@ -66,11 +66,10 @@ if __name__ == '__main__':
 
     parser.add_argument('--task', type=str, default='MLM',
                         choices=['MLM', 'distillation'], help='task which the model was pre-trained on')
-    parser.add_argument('--clinicalbert', type=str, default='emilyalsentzer/Bio_ClinicalBERT')
     parser.add_argument('--dataset', type=str, default='VQA-Med', help='roco or vqamed2019')
     parser.add_argument('--cnn_encoder', type=str, default='resnet152', help='name of the cnn encoder')
     parser.add_argument('--use_relu', action = 'store_true', default = False, help = "use ReLu")
-    parser.add_argument('--transformer_model', type=str, default='transformer',choices=['transformer', 'realformer', 'feedback-transformer'], help='name of the transformer model')
+    parser.add_argument('--transformer_model', type=str, default='transformer',choices=['transformer', 'realformer', 'feedback-transformer', 'compositional'], help='name of the transformer model')
     parser.add_argument('--loss', type=str, default='CrossEntropyLoss', choices=['CrossEntropyLoss', 'ASLSingleLabel'], help='loss to evaluate model on')
 
     args = parser.parse_args()

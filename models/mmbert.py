@@ -1,6 +1,7 @@
 from models.transformer import BertLayer
 from models.feedback_transformer_pytorch import FeedbackTransformer
 from models.realformer import ResEncoderBlock
+from models.comp_attention import Compositional_Attention
 from models.image_encoding import get_transfer
 from models.serf import SERF
 import torch
@@ -11,6 +12,7 @@ import math
 import numpy as np
 import torch.nn.functional as F
 import timm
+import copy
 
 
 def get_bert_model(args):
@@ -32,6 +34,9 @@ def get_transformer_model(args):
     elif 'transformer' in args.transformer_model:
         print('Using regular transformer')
         return Transformer(args)
+    elif 'compositional' in args.transformer_model:
+        print('Using Compositional Attention')
+        return Compositional_Transformer(args)
     else:
         raise NotImplementedError
 
@@ -86,6 +91,25 @@ class RealFormer(TransformerAbstract):
         prev = None
         for resencoder in self.mains:
             h, prev = resencoder(h, prev = prev, mask = mask)
+        return h
+
+def _get_clones(module, N):
+    return nn.ModuleList([copy.deepcopy(module) for i in range(N)])
+
+class Compositional_Transformer(TransformerAbstract):
+    def __init__(self, args):
+        super().__init__(args)
+        #i used head_cnt = 8 in RealFormer
+        head_cnt = 8
+        print('Compositional Attention from abstract, with mask and residuals heads', head_cnt)
+        self.n_layers = args.n_layers
+        layer = Compositional_Attention(dim = args.hidden_size, qk_dim= args.hidden_size // head_cnt, nheads=head_cnt, nrules=head_cnt, dot=True) #dot=True for compositional att
+        self.layers = _get_clones(layer, self.n_layers)
+    def forward(self, img, input_ids, token_type_ids, mask):
+        h = self.prepare_input(img, input_ids, token_type_ids, mask)
+        prev = None
+        for module in self.layers:
+            h, prev = module(h, mask=mask, prev=prev)
         return h
 
 class FeedBackTransformer(TransformerAbstract):
